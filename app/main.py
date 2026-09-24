@@ -104,16 +104,16 @@ async def get_schema(table_name: str):
 
 
 @app.post("/query")
-async def query_table(table_name: str, question: str):
-    """Phase 3: ask a natural-language question about a table and get
-    back the generated SQL + results."""
+async def query_table(table_name: str, question: str, include_insight: bool = True):
+    """Phase 3 + 4: ask a natural-language question about a table and get
+    back the generated SQL, the results, and a plain-English insight."""
     if table_name not in SCHEMA_REGISTRY:
         raise HTTPException(404, f"Table '{table_name}' doesn't exist yet — use /upload first.")
 
     schema = SCHEMA_REGISTRY[table_name]
     conn = _get_conn()
     try:
-        result = answer_question(question, schema, conn)
+        result = answer_question(question, schema, conn, include_insight=include_insight)
     except UnsafeQueryError as e:
         raise HTTPException(400, f"Query blocked for safety: {e}")
     finally:

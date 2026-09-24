@@ -20,6 +20,8 @@ import json
 import pandas as pd
 from anthropic import Anthropic
 
+from insight_generator import generate_insight
+
 
 # ---- Safety: only ever allow read-only, single-statement SQL ----
 FORBIDDEN_KEYWORDS = [
@@ -104,18 +106,25 @@ def run_query(conn: sqlite3.Connection, sql: str) -> pd.DataFrame:
 
 
 def answer_question(question: str, schema: dict, conn: sqlite3.Connection,
-                     client: Anthropic | None = None) -> dict:
-    """Full pipeline: question -> SQL -> results, with everything the
-    transparency log needs."""
+                     client: Anthropic | None = None, include_insight: bool = True) -> dict:
+    """Full pipeline: question -> SQL -> results -> plain-English insight,
+    with everything the transparency log needs."""
+    client = client or Anthropic()
     sql = generate_sql(question, schema, client=client)
     results = run_query(conn, sql)
+    records = results.to_dict(orient="records")
 
-    return {
+    output = {
         "question": question,
         "sql_generated": sql,
         "row_count": len(results),
-        "results": results.to_dict(orient="records"),
+        "results": records,
     }
+
+    if include_insight:
+        output["insight"] = generate_insight(question, sql, records, client=client)
+
+    return output
 
 
 if __name__ == "__main__":

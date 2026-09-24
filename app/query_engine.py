@@ -68,10 +68,15 @@ def _validate_sql(sql: str) -> None:
             raise UnsafeQueryError(f"Query contains a forbidden keyword: '{word}'.")
 
 
-def generate_sql(question: str, schema: dict, client: Anthropic | None = None) -> str:
+def generate_sql(question: str, schema: dict, client: Anthropic | None = None,
+                  history_context: str = "") -> str:
     """Calls Claude to turn a natural-language question into SQL for the
     given schema. Returns validated SQL (raises UnsafeQueryError if the
-    model returns something unsafe)."""
+    model returns something unsafe).
+
+    `history_context` (optional) is recent conversation history, so
+    follow-up questions like "now break that down by month" can be
+    resolved against the previous query instead of standing alone."""
     client = client or Anthropic()
     schema_context = _build_schema_context(schema)
 
@@ -80,10 +85,18 @@ def generate_sql(question: str, schema: dict, client: Anthropic | None = None) -
         "and a natural-language question, respond with ONLY the SQL query "
         "needed to answer it — no explanation, no markdown, just the raw SQL. "
         "Always use SELECT statements only. Never modify data. "
-        "Use exact column and table names as given, wrapped in double quotes."
+        "Use exact column and table names as given, wrapped in double quotes. "
+        "If conversation history is provided and the question refers to a "
+        "previous result (e.g. 'that', 'those', 'now also show...', 'break "
+        "that down by...'), use the most recent query as context to build "
+        "on rather than starting over."
     )
 
-    user_prompt = f"{schema_context}\n\nQuestion: {question}\n\nSQL query:"
+    prompt_parts = [schema_context]
+    if history_context:
+        prompt_parts.append(history_context)
+    prompt_parts.append(f"Question: {question}\n\nSQL query:")
+    user_prompt = "\n\n".join(prompt_parts)
 
     response = client.messages.create(
         model="claude-sonnet-4-6",
@@ -106,11 +119,14 @@ def run_query(conn: sqlite3.Connection, sql: str) -> pd.DataFrame:
 
 
 def answer_question(question: str, schema: dict, conn: sqlite3.Connection,
-                     client: Anthropic | None = None, include_insight: bool = True) -> dict:
+                     client: Anthropic | None = None, include_insight: bool = True,
+                     history_context: str = "") -> dict:
     """Full pipeline: question -> SQL -> results -> plain-English insight,
-    with everything the transparency log needs."""
+    with everything the transparency log needs. Pass `history_context`
+    (from conversation_memory.format_history_for_prompt) to let this
+    question build on a previous one."""
     client = client or Anthropic()
-    sql = generate_sql(question, schema, client=client)
+    sql = generate_sql(question, schema, client=client, history_context=history_context)
     results = run_query(conn, sql)
     records = results.to_dict(orient="records")
 

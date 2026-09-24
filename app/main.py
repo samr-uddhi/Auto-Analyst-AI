@@ -22,6 +22,7 @@ from schema_inference import profile_dataset
 from db_builder import create_table_from_schema, load_dataframe, append_new_data
 from query_engine import answer_question, UnsafeQueryError
 from transparency_log import log_event, log_many, get_log
+from conversation_memory import add_turn, format_history_for_prompt, clear_history
 
 app = FastAPI(title="AutoAnalyst API", version="0.1.0")
 
@@ -122,26 +123,43 @@ async def get_transparency_log(table_name: str):
 
 @app.post("/query")
 async def query_table(table_name: str, question: str, include_insight: bool = True):
-    """Phase 3 + 4: ask a natural-language question about a table and get
-    back the generated SQL, the results, and a plain-English insight."""
+    """Phase 3 + 4 + 6: ask a natural-language question about a table and
+    get back the generated SQL, the results, and a plain-English insight.
+    Follow-up questions ("now break that down by month") are resolved
+    using recent conversation history for this table."""
     if table_name not in SCHEMA_REGISTRY:
         raise HTTPException(404, f"Table '{table_name}' doesn't exist yet — use /upload first.")
 
     schema = SCHEMA_REGISTRY[table_name]
+    history_context = format_history_for_prompt(table_name)
+
     conn = _get_conn()
     try:
-        result = answer_question(question, schema, conn, include_insight=include_insight)
+        result = answer_question(
+            question, schema, conn,
+            include_insight=include_insight,
+            history_context=history_context,
+        )
     except UnsafeQueryError as e:
         log_event(table_name, "warning", f"Blocked an unsafe query for question: '{question}' — {e}")
         raise HTTPException(400, f"Query blocked for safety: {e}")
     finally:
         conn.close()
 
+    add_turn(table_name, question, result["sql_generated"])
     log_event(table_name, "query", f'"{question}" -> {result["sql_generated"]}')
     if include_insight:
         log_event(table_name, "insight", result["insight"])
 
     return result
+
+
+@app.post("/reset-conversation/{table_name}")
+async def reset_conversation(table_name: str):
+    """Clears the follow-up conversation history for a table — the next
+    question will be treated as a fresh start, not a continuation."""
+    clear_history(table_name)
+    return {"message": f"Conversation history cleared for '{table_name}'."}
 
 
 @app.get("/")

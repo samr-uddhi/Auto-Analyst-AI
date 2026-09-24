@@ -13,7 +13,7 @@ Built for small businesses and teams without a dedicated data engineer.
 - [x] Natural language → SQL query layer (with safety validation — read-only, single-statement queries only)
 - [x] Insight/report generator (plain-English business summary of results)
 - [x] Transparency log (every schema, append, query, and insight decision recorded in plain English)
-- [ ] Iteration memory (conversational follow-ups)
+- [x] Iteration memory (follow-up questions build on the previous query)
 - [ ] Streamlit frontend
 
 ## Architecture
@@ -40,7 +40,12 @@ Transparency log (transparency_log.py)
    → every schema choice, append, query, and insight is recorded per table
    → GET /log/{table_name} shows the full plain-English decision history
         ↓
-[Coming next] Iteration memory — follow-up prompts that modify the previous query/report
+Iteration memory (conversation_memory.py)
+   → recent question/SQL pairs are remembered per table
+   → a follow-up like "now break that down by month" builds on the
+     previous query instead of starting from scratch
+        ↓
+[Coming next] Streamlit UI — upload, chat, and dashboard in one screen
 ```
 
 ## Tech Stack
@@ -84,6 +89,7 @@ Visit **http://127.0.0.1:8000/docs** for the interactive API (Swagger UI).
 5. Use `GET /tables/sales_orders` to see the combined data
 6. Use `POST /query` with `table_name=sales_orders` and `question=What's the total amount by region?` — Claude generates the SQL, it runs, and you get back the results **plus a plain-English insight summarizing what they mean**
 7. Use `GET /log/sales_orders` to see the full transparency log — every schema decision, append, query, and insight generated so far, in plain English with timestamps
+8. Ask a follow-up in `POST /query` without repeating context — e.g. after "total amount by region", ask `question=now just show the top one` — it resolves against the previous query automatically. Use `POST /reset-conversation/sales_orders` to start a fresh conversation thread
 
 ## Project structure
 
@@ -95,7 +101,8 @@ autoanalyst/
 │   ├── db_builder.py           # Dynamic table creation & append engine
 │   ├── query_engine.py         # Natural language → SQL → results
 │   ├── insight_generator.py    # Results → plain-English business insight
-│   └── transparency_log.py     # Records every AI decision in plain English
+│   ├── transparency_log.py     # Records every AI decision in plain English
+│   └── conversation_memory.py  # Follow-up question context per table
 ├── sample_data/
 │   ├── sales_orders.csv
 │   └── sales_orders_new_batch.csv

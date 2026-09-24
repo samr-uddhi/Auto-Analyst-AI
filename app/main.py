@@ -20,6 +20,7 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 
 from schema_inference import profile_dataset
 from db_builder import create_table_from_schema, load_dataframe, append_new_data
+from query_engine import answer_question, UnsafeQueryError
 
 app = FastAPI(title="AutoAnalyst API", version="0.1.0")
 
@@ -100,6 +101,25 @@ async def get_schema(table_name: str):
     if table_name not in SCHEMA_REGISTRY:
         raise HTTPException(404, f"No schema recorded for '{table_name}'.")
     return SCHEMA_REGISTRY[table_name]
+
+
+@app.post("/query")
+async def query_table(table_name: str, question: str):
+    """Phase 3: ask a natural-language question about a table and get
+    back the generated SQL + results."""
+    if table_name not in SCHEMA_REGISTRY:
+        raise HTTPException(404, f"Table '{table_name}' doesn't exist yet — use /upload first.")
+
+    schema = SCHEMA_REGISTRY[table_name]
+    conn = _get_conn()
+    try:
+        result = answer_question(question, schema, conn)
+    except UnsafeQueryError as e:
+        raise HTTPException(400, f"Query blocked for safety: {e}")
+    finally:
+        conn.close()
+
+    return result
 
 
 @app.get("/")

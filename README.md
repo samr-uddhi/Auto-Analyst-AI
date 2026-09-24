@@ -10,7 +10,7 @@ Built for small businesses and teams without a dedicated data engineer.
 - [x] Dynamic SQL table creation from inferred schema
 - [x] Append engine with schema drift detection (auto-adds new columns)
 - [x] FastAPI backend with upload/append/preview endpoints
-- [ ] Natural language → SQL query layer
+- [x] Natural language → SQL query layer (with safety validation — read-only, single-statement queries only)
 - [ ] Insight/report generator
 - [ ] Transparency log UI
 - [ ] Iteration memory (conversational follow-ups)
@@ -27,7 +27,12 @@ Dynamic SQL table creation (db_builder.py)
         ↓
 Append Engine — new uploads detect schema drift, auto-add columns
         ↓
-[Coming next] Natural language query layer → SQL → insights
+Natural language query layer (query_engine.py)
+   → Claude generates SQL from the question + schema
+   → SQL is validated (read-only, single statement, no destructive keywords)
+   → query runs, results returned
+        ↓
+[Coming next] Insight/report generation from results
 ```
 
 ## Tech Stack
@@ -51,7 +56,11 @@ source venv/bin/activate      # Windows: venv\Scripts\activate
 # 3. Install dependencies
 pip install -r requirements.txt
 
-# 4. Run the API
+# 4. Add your Anthropic API key
+cp .env.example .env
+# then open .env and paste your key in place of "your-api-key-here"
+
+# 5. Run the API
 cd app
 uvicorn main:app --reload
 ```
@@ -65,6 +74,7 @@ Visit **http://127.0.0.1:8000/docs** for the interactive API (Swagger UI).
 3. Check the response — it shows the inferred schema, detected primary key, and the exact SQL used to build the table
 4. Use `POST /append` with the same `table_name` and upload `sample_data/sales_orders_new_batch.csv` — notice it auto-detects the new `payment_method` column and adds it without breaking anything
 5. Use `GET /tables/sales_orders` to see the combined data
+6. Use `POST /query` with `table_name=sales_orders` and `question=What's the total amount by region?` — Claude generates the SQL, it runs, and you get results back with the exact query used
 
 ## Project structure
 
@@ -73,10 +83,13 @@ autoanalyst/
 ├── app/
 │   ├── main.py                 # FastAPI app & endpoints
 │   ├── schema_inference.py     # Auto-profiling & type inference
-│   └── db_builder.py           # Dynamic table creation & append engine
+│   ├── db_builder.py           # Dynamic table creation & append engine
+│   └── query_engine.py         # Natural language → SQL → results
 ├── sample_data/
 │   ├── sales_orders.csv
 │   └── sales_orders_new_batch.csv
+├── .env.example
+├── .gitignore
 ├── requirements.txt
 └── README.md
 ```

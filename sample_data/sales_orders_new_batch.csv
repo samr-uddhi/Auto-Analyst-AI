@@ -1,0 +1,3 @@
+order_id,customer_email,order_date,amount,region,payment_method
+6,eve@mail.com,2024-01-10,150.00,North,card
+7,finn@mail.com,2024-01-11,75.50,South,upi

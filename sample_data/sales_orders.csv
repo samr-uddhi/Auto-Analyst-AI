@@ -1,0 +1,6 @@
+order_id,customer_email,order_date,amount,region
+1,alex@mail.com,2024-01-01,120.50,North
+2,bree@mail.com,2024-01-03,89.00,South
+3,carl@mail.com,2024-01-05,,East
+4,carl@mail.com,2024-01-05,,East
+5,dee@mail.com,2024-01-07,45.00,West

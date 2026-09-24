@@ -21,6 +21,7 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 from schema_inference import profile_dataset
 from db_builder import create_table_from_schema, load_dataframe, append_new_data
 from query_engine import answer_question, UnsafeQueryError
+from transparency_log import log_event, log_many, get_log
 
 app = FastAPI(title="AutoAnalyst API", version="0.1.0")
 
@@ -57,6 +58,9 @@ async def upload_dataset(table_name: str, file: UploadFile = File(...)):
 
     SCHEMA_REGISTRY[table_name] = schema
 
+    log_event(table_name, "schema", f"Table '{table_name}' created from {len(df)} uploaded rows.")
+    log_many(table_name, "warning", schema["warnings"])
+
     return {
         "message": f"Table '{table_name}' created and loaded successfully.",
         "rows_loaded": len(df),
@@ -76,6 +80,8 @@ async def append_dataset(table_name: str, file: UploadFile = File(...)):
     conn = _get_conn()
     result = append_new_data(conn, table_name, df)
     conn.close()
+
+    log_many(table_name, "append", result["log"])
 
     return {
         "message": f"Append complete for '{table_name}'.",
@@ -103,6 +109,17 @@ async def get_schema(table_name: str):
     return SCHEMA_REGISTRY[table_name]
 
 
+@app.get("/log/{table_name}")
+async def get_transparency_log(table_name: str):
+    """Phase 5: every AI decision made about this table, in plain English,
+    in chronological order — schema choices, appends, queries, insights,
+    and anything blocked for safety."""
+    log = get_log(table_name)
+    if not log:
+        raise HTTPException(404, f"No log entries found for '{table_name}'.")
+    return {"table_name": table_name, "entries": log}
+
+
 @app.post("/query")
 async def query_table(table_name: str, question: str, include_insight: bool = True):
     """Phase 3 + 4: ask a natural-language question about a table and get
@@ -115,9 +132,14 @@ async def query_table(table_name: str, question: str, include_insight: bool = Tr
     try:
         result = answer_question(question, schema, conn, include_insight=include_insight)
     except UnsafeQueryError as e:
+        log_event(table_name, "warning", f"Blocked an unsafe query for question: '{question}' — {e}")
         raise HTTPException(400, f"Query blocked for safety: {e}")
     finally:
         conn.close()
+
+    log_event(table_name, "query", f'"{question}" -> {result["sql_generated"]}')
+    if include_insight:
+        log_event(table_name, "insight", result["insight"])
 
     return result
 

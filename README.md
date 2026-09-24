@@ -12,7 +12,7 @@ Built for small businesses and teams without a dedicated data engineer.
 - [x] FastAPI backend with upload/append/preview endpoints
 - [x] Natural language → SQL query layer (with safety validation — read-only, single-statement queries only)
 - [x] Insight/report generator (plain-English business summary of results)
-- [ ] Transparency log UI
+- [x] Transparency log (every schema, append, query, and insight decision recorded in plain English)
 - [ ] Iteration memory (conversational follow-ups)
 - [ ] Streamlit frontend
 
@@ -36,7 +36,11 @@ Insight generator (insight_generator.py)
    → results are summarized into a plain-English business takeaway
    → e.g. "North region leads with $270 in sales, more than 3x East's total."
         ↓
-[Coming next] Transparency log — surfacing every schema/query decision to the user
+Transparency log (transparency_log.py)
+   → every schema choice, append, query, and insight is recorded per table
+   → GET /log/{table_name} shows the full plain-English decision history
+        ↓
+[Coming next] Iteration memory — follow-up prompts that modify the previous query/report
 ```
 
 ## Tech Stack
@@ -79,6 +83,7 @@ Visit **http://127.0.0.1:8000/docs** for the interactive API (Swagger UI).
 4. Use `POST /append` with the same `table_name` and upload `sample_data/sales_orders_new_batch.csv` — notice it auto-detects the new `payment_method` column and adds it without breaking anything
 5. Use `GET /tables/sales_orders` to see the combined data
 6. Use `POST /query` with `table_name=sales_orders` and `question=What's the total amount by region?` — Claude generates the SQL, it runs, and you get back the results **plus a plain-English insight summarizing what they mean**
+7. Use `GET /log/sales_orders` to see the full transparency log — every schema decision, append, query, and insight generated so far, in plain English with timestamps
 
 ## Project structure
 
@@ -89,7 +94,8 @@ autoanalyst/
 │   ├── schema_inference.py     # Auto-profiling & type inference
 │   ├── db_builder.py           # Dynamic table creation & append engine
 │   ├── query_engine.py         # Natural language → SQL → results
-│   └── insight_generator.py    # Results → plain-English business insight
+│   ├── insight_generator.py    # Results → plain-English business insight
+│   └── transparency_log.py     # Records every AI decision in plain English
 ├── sample_data/
 │   ├── sales_orders.csv
 │   └── sales_orders_new_batch.csv

@@ -4,7 +4,7 @@ A schema-agnostic AI data platform that auto-infers database schema from raw dat
 
 Built for small businesses and teams without a dedicated data engineer.
 
-## Status: Phase 1 + Append Engine (in progress)
+## Status: Phases 1–7 complete
 
 - [x] Auto schema inference (column types, primary key detection, data quality warnings)
 - [x] Dynamic SQL table creation from inferred schema
@@ -14,7 +14,8 @@ Built for small businesses and teams without a dedicated data engineer.
 - [x] Insight/report generator (plain-English business summary of results)
 - [x] Transparency log (every schema, append, query, and insight decision recorded in plain English)
 - [x] Iteration memory (follow-up questions build on the previous query)
-- [ ] Streamlit frontend
+- [x] Streamlit frontend (upload, chat, schema view, and transparency log in one screen)
+- [ ] Multi-domain testing (sales, HR, inventory) to prove generalizability
 
 ## Architecture
 
@@ -45,15 +46,20 @@ Iteration memory (conversation_memory.py)
    → a follow-up like "now break that down by month" builds on the
      previous query instead of starting from scratch
         ↓
-[Coming next] Streamlit UI — upload, chat, and dashboard in one screen
+Streamlit UI (streamlit_app.py)
+   → upload/append, chat-style Q&A, schema view, and the transparency
+     log all in one screen — the demoable front end
+        ↓
+[Coming next] Multi-domain testing — proving it generalizes across sales, HR, and inventory data
 ```
 
 ## Tech Stack
 
 - **Backend:** Python, FastAPI
+- **Frontend:** Streamlit + Plotly (chat-style Q&A, dashboard, transparency log)
 - **Database:** SQLite (dev) — designed to be swappable for Postgres
 - **Schema inference:** Pandas + custom type/relationship detection
-- **AI layer (upcoming):** Claude/OpenAI API for NL→SQL and insight generation
+- **AI layer:** Claude (Anthropic API) for NL→SQL and insight generation
 
 ## Setup
 
@@ -80,6 +86,12 @@ uvicorn main:app --reload
 
 Visit **http://127.0.0.1:8000/docs** for the interactive API (Swagger UI).
 
+**Or run the full UI instead of the raw API:**
+```bash
+streamlit run app/streamlit_app.py
+```
+This opens the complete experience in your browser — upload a file, chat with your data, see the dashboard, schema, and transparency log all in one place. This is the version to screenshot/record for your README or resume.
+
 ## Try it out
 
 1. Open `/docs` in your browser
@@ -102,7 +114,8 @@ autoanalyst/
 │   ├── query_engine.py         # Natural language → SQL → results
 │   ├── insight_generator.py    # Results → plain-English business insight
 │   ├── transparency_log.py     # Records every AI decision in plain English
-│   └── conversation_memory.py  # Follow-up question context per table
+│   ├── conversation_memory.py  # Follow-up question context per table
+│   └── streamlit_app.py        # Full UI: upload, chat, dashboard, transparency log
 ├── sample_data/
 │   ├── sales_orders.csv
 │   └── sales_orders_new_batch.csv

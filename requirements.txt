@@ -5,3 +5,7 @@ python-multipart
 openpyxl
 anthropic
 python-dotenv
+streamlit
+plotly
+streamlit
+plotly

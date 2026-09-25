@@ -1,0 +1,8 @@
+sku,product_name,category,quantity_in_stock,unit_cost,warehouse
+SKU-1001,Wireless Mouse,Electronics,240,8.50,North
+SKU-1002,USB-C Cable,Electronics,510,3.20,North
+SKU-1003,Office Chair,Furniture,35,89.00,South
+SKU-1004,Standing Desk,Furniture,12,215.00,South
+SKU-1005,Notebook Pack,Stationery,800,2.10,East
+SKU-1006,Wireless Mouse,Electronics,0,8.50,East
+SKU-1007,Desk Lamp,Furniture,60,,South

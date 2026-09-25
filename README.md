@@ -4,7 +4,7 @@ A schema-agnostic AI data platform that auto-infers database schema from raw dat
 
 Built for small businesses and teams without a dedicated data engineer.
 
-## Status: Phases 1–7 complete
+## Status: All 8 phases complete ✅
 
 - [x] Auto schema inference (column types, primary key detection, data quality warnings)
 - [x] Dynamic SQL table creation from inferred schema
@@ -15,7 +15,7 @@ Built for small businesses and teams without a dedicated data engineer.
 - [x] Transparency log (every schema, append, query, and insight decision recorded in plain English)
 - [x] Iteration memory (follow-up questions build on the previous query)
 - [x] Streamlit frontend (upload, chat, schema view, and transparency log in one screen)
-- [ ] Multi-domain testing (sales, HR, inventory) to prove generalizability
+- [x] Multi-domain testing (sales, HR, inventory) — proven schema-agnostic, see results below
 
 ## Architecture
 
@@ -50,7 +50,9 @@ Streamlit UI (streamlit_app.py)
    → upload/append, chat-style Q&A, schema view, and the transparency
      log all in one screen — the demoable front end
         ↓
-[Coming next] Multi-domain testing — proving it generalizes across sales, HR, and inventory data
+Multi-domain test (test_multi_domain.py)
+   → the entire pipeline run against sales, HR, and inventory data —
+     confirms it's genuinely schema-agnostic, not hardcoded to one shape
 ```
 
 ## Tech Stack
@@ -115,15 +117,37 @@ autoanalyst/
 │   ├── insight_generator.py    # Results → plain-English business insight
 │   ├── transparency_log.py     # Records every AI decision in plain English
 │   ├── conversation_memory.py  # Follow-up question context per table
-│   └── streamlit_app.py        # Full UI: upload, chat, dashboard, transparency log
+│   ├── streamlit_app.py        # Full UI: upload, chat, dashboard, transparency log
+│   └── test_multi_domain.py    # Proves the pipeline generalizes across 3 domains
 ├── sample_data/
 │   ├── sales_orders.csv
-│   └── sales_orders_new_batch.csv
+│   ├── sales_orders_new_batch.csv
+│   ├── hr_employees.csv
+│   ├── hr_employees_new_batch.csv
+│   ├── inventory_stock.csv
+│   └── inventory_stock_new_batch.csv
 ├── .env.example
 ├── .gitignore
 ├── requirements.txt
 └── README.md
 ```
+
+## Proof of generalizability
+
+`app/test_multi_domain.py` runs the full pipeline — schema inference, table creation, and append with schema drift — against three unrelated datasets with no dataset-specific code. Actual output:
+
+| Domain | Columns auto-detected | Primary key found | New column auto-added on append | Final rows |
+|---|---|---|---|---|
+| Sales orders | 5 | `order_id` | `payment_method` | 7 |
+| HR employees | 7 | `employee_id` | `remote_status` | 9 |
+| Inventory stock | 6 | `sku` | `restock_date` | 9 |
+
+Each domain got a different, correctly-detected primary key and a different auto-added column on append — proof the system reasons about whatever schema it's given rather than assuming a fixed shape. Run it yourself:
+```bash
+cd app
+python3 test_multi_domain.py
+```
+(Set `ANTHROPIC_API_KEY` first to also see the NL query + insight layer tested against all three domains.)
 
 ## Why this project
 

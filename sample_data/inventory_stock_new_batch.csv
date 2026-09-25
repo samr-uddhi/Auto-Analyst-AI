@@ -1,0 +1,3 @@
+sku,product_name,category,quantity_in_stock,unit_cost,warehouse,restock_date
+SKU-1008,Ergonomic Keyboard,Electronics,150,32.00,North,2026-10-01
+SKU-1009,Bookshelf,Furniture,20,120.00,South,2026-10-05
